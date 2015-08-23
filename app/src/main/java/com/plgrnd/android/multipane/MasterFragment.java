@@ -11,12 +11,17 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class MasterFragment extends Fragment implements RecyclerAdapter.OnListItemClickListener {
 
     public interface MasterFragmentCallback {
         void onListItemClick(View v, int itemId);
+
+        void onListItemClickInMultiMode(View v, int itemId, ArrayList<Integer> selectedItems);
+
+        void onListItemLongClick(View v, int itemId, ArrayList<Integer> selectedItems);
 
         List<String> getListData();
     }
@@ -45,27 +50,26 @@ public class MasterFragment extends Fragment implements RecyclerAdapter.OnListIt
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.fragment_master, container, false);
-    }
-
-    @Override
-    public void onViewCreated(View view, Bundle savedInstanceState) {
-        super.onViewCreated(view, savedInstanceState);
-
+        View view = inflater.inflate(R.layout.fragment_master, container, false);
         mRecyclerView = (RecyclerView) view.findViewById(R.id.recycler_view);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
         mRecyclerView.setAdapter(new RecyclerAdapter(this, mCallback != null ? mCallback.getListData() : null));
+        return view;
     }
 
     @Override
-    public boolean onItemClick(View v, int position) {
+    public void onItemClick(View v, int position) {
         mCallback.onListItemClick(v, position);
-        return true;
     }
 
     @Override
-    public void onItemLongClick(int position) {
+    public void onItemClickInMultiMode(View v, int position, ArrayList<Integer> selectedItems) {
+        mCallback.onListItemClickInMultiMode(v, position, selectedItems);
+    }
 
+    @Override
+    public void onItemLongClick(View v, int position, ArrayList<Integer> selectedItems) {
+        mCallback.onListItemLongClick(v, position, selectedItems);
     }
 
     public void selectItem(int position) {
@@ -77,6 +81,12 @@ public class MasterFragment extends Fragment implements RecyclerAdapter.OnListIt
     public void deselectItem() {
         if (isAdded()) {
             ((RecyclerAdapter) mRecyclerView.getAdapter()).switchSelectionState(-1);
+        }
+    }
+
+    public void selectMultiModeItems(ArrayList<Integer> multiModeItems) {
+        if (isAdded() && mRecyclerView != null) {
+            ((RecyclerAdapter) mRecyclerView.getAdapter()).setSelectedItems(multiModeItems);
         }
     }
 

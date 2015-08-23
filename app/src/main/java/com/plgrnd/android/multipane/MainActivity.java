@@ -6,21 +6,25 @@ import android.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
+import android.view.ActionMode;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 
+import java.util.ArrayList;
 import java.util.List;
 
-public class MainActivity extends AppCompatActivity implements MasterFragment.MasterFragmentCallback {
+public class MainActivity extends AppCompatActivity implements MasterFragment.MasterFragmentCallback, ActionMode.Callback {
 
     private static final String STATE_SHOWING_DETAIL = "state_showing_detail";
     private static final String STATE_SELECTED_ITEM = "state_selected_item";
+    private static final String STATE_MULTI_MODE_ITEMS = "state_multi_mode_items";
     private static final int NONE = -1;
     private boolean mDualPane;
     private boolean mShowingDetail;
     private RetainedFragment mRetainedFragment;
     private int mSelectedItem = NONE;
+    private ArrayList<Integer> mMultiModeItems;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,14 +43,33 @@ public class MainActivity extends AppCompatActivity implements MasterFragment.Ma
                 fm.beginTransaction()
                         .replace(R.id.single_pane_container, new MasterFragment(), MasterFragment.TAG)
                         .commit();
+                fm.executePendingTransactions();
             }
         } else {
-            if (savedInstanceState.getBoolean(STATE_SHOWING_DETAIL)) {
-                removeDetailFragment();
-                addDetailFragment(savedInstanceState.getInt(STATE_SELECTED_ITEM, NONE));
+            mShowingDetail = savedInstanceState.getBoolean(STATE_SHOWING_DETAIL);
+            if (mShowingDetail) {
+                mSelectedItem = savedInstanceState.getInt(STATE_SELECTED_ITEM, NONE);
+            }
+            if (savedInstanceState.containsKey(STATE_MULTI_MODE_ITEMS)) {
+                mMultiModeItems = savedInstanceState.getIntegerArrayList(STATE_MULTI_MODE_ITEMS);
             }
         }
         mRetainedFragment = (RetainedFragment) fm.findFragmentByTag(RetainedFragment.TAG);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        if (mMultiModeItems != null) {
+            MasterFragment fragment = getMasterFragment();
+            if (fragment != null) {
+                fragment.selectMultiModeItems(mMultiModeItems);
+            }
+        }
+        if (mShowingDetail) {
+            removeDetailFragment();
+            addDetailFragment(mSelectedItem);
+        }
     }
 
     @Override
@@ -71,6 +94,7 @@ public class MainActivity extends AppCompatActivity implements MasterFragment.Ma
         if (id == android.R.id.home) {
             if (!mDualPane) {
                 removeDetailFragment();
+                mSelectedItem = NONE;
                 return true;
             }
         }
@@ -82,8 +106,7 @@ public class MainActivity extends AppCompatActivity implements MasterFragment.Ma
         mShowingDetail = true;
         mSelectedItem = itemId;
 
-        FragmentManager fm = getFragmentManager();
-        MasterFragment masterFragment = (MasterFragment) fm.findFragmentById(R.id.master_fragment);
+        MasterFragment masterFragment = getMasterFragment();
         if (masterFragment != null) {
             masterFragment.selectItem(mSelectedItem);
         }
@@ -100,16 +123,26 @@ public class MainActivity extends AppCompatActivity implements MasterFragment.Ma
         ft.addToBackStack(null).commit();
     }
 
+    private MasterFragment getMasterFragment() {
+        FragmentManager fm = getFragmentManager();
+        MasterFragment fragment;
+        if (mDualPane) {
+            fragment = (MasterFragment) fm.findFragmentById(R.id.master_fragment);
+        } else {
+            fragment = (MasterFragment) fm.findFragmentByTag(MasterFragment.TAG);
+        }
+        return fragment;
+    }
+
     private void removeDetailFragment() {
         mShowingDetail = false;
-        mSelectedItem = NONE;
 
-        FragmentManager fm = getFragmentManager();
-        MasterFragment masterFragment = (MasterFragment) fm.findFragmentById(R.id.master_fragment);
+        MasterFragment masterFragment = getMasterFragment();
         if (masterFragment != null) {
             masterFragment.deselectItem();
         }
 
+        FragmentManager fm = getFragmentManager();
         Fragment detailFragment = fm.findFragmentByTag(DetailFragment.TAG);
 
         if (detailFragment != null) {
@@ -126,6 +159,7 @@ public class MainActivity extends AppCompatActivity implements MasterFragment.Ma
     public void onBackPressed() {
         if (mShowingDetail) {
             removeDetailFragment();
+            mSelectedItem = NONE;
         } else {
             super.onBackPressed();
         }
@@ -136,6 +170,9 @@ public class MainActivity extends AppCompatActivity implements MasterFragment.Ma
         super.onSaveInstanceState(outState);
         outState.putBoolean(STATE_SHOWING_DETAIL, mShowingDetail);
         outState.putInt(STATE_SELECTED_ITEM, mSelectedItem);
+        if (mMultiModeItems != null) {
+            outState.putIntegerArrayList(STATE_MULTI_MODE_ITEMS, mMultiModeItems);
+        }
     }
 
     @Override
@@ -145,10 +182,41 @@ public class MainActivity extends AppCompatActivity implements MasterFragment.Ma
     }
 
     @Override
+    public void onListItemClickInMultiMode(View v, int itemId, ArrayList<Integer> selectedItems) {
+        mMultiModeItems = selectedItems;
+    }
+
+    @Override
+    public void onListItemLongClick(View v, int itemId, ArrayList<Integer> selectedItems) {
+        startActionMode(this);
+        mMultiModeItems = selectedItems;
+    }
+
+    @Override
     public List<String> getListData() {
         if (mRetainedFragment == null) {
             mRetainedFragment = (RetainedFragment) getFragmentManager().findFragmentByTag(RetainedFragment.TAG);
         }
         return mRetainedFragment != null ? mRetainedFragment.getRetainedArray() : null;
+    }
+
+    @Override
+    public boolean onCreateActionMode(ActionMode mode, Menu menu) {
+        return false;
+    }
+
+    @Override
+    public boolean onPrepareActionMode(ActionMode mode, Menu menu) {
+        return false;
+    }
+
+    @Override
+    public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
+        return false;
+    }
+
+    @Override
+    public void onDestroyActionMode(ActionMode mode) {
+
     }
 }

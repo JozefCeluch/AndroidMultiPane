@@ -13,11 +13,14 @@ import java.util.List;
 public class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.Holder> {
 
     public interface OnListItemClickListener {
-        //TODO TRUE for multi select, false for single select
-        boolean onItemClick(View v, int position);
+        void onItemClick(View v, int position);
 
-        void onItemLongClick(int position);
+        void onItemClickInMultiMode(View v, int position, ArrayList<Integer> selectedItems);
+
+        void onItemLongClick(View v, int position, ArrayList<Integer> selectedItems);
     }
+
+    public enum SelectionMode {SINGLE, MULTI}
 
     private static final int NONE_SELECTED = -1;
 
@@ -26,11 +29,13 @@ public class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.Holder
 
     private List<String> mItems;
     private OnListItemClickListener mClickListener;
+    private SelectionMode mMode;
 
     public RecyclerAdapter(OnListItemClickListener onListItemClickListener, List<String> items) {
         mSelectedItems = new ArrayList<>();
         mClickListener = onListItemClickListener;
         mItems = items;
+        mMode = SelectionMode.SINGLE;
     }
 
     @Override
@@ -44,15 +49,23 @@ public class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.Holder
         holder.itemView.setActivated(isSelected(i));
     }
 
+    public void setMode(SelectionMode mode) {
+        mMode = mode;
+    }
+
+    public SelectionMode getMode() {
+        return mMode;
+    }
+
     public boolean isSelected(int position) {
-        return position == mSelectedSingleItem; // || mSelectedItems.contains(Integer.valueOf(position));
+        return position == mSelectedSingleItem || mSelectedItems.contains(Integer.valueOf(position));
     }
 
     public void switchSelectionState(int position) {
         if (position < 0) {
             position = NONE_SELECTED;
         }
-        if (mSelectedItems.isEmpty()) {
+        if (mMode == SelectionMode.SINGLE) {
             int previousSelectedItem = mSelectedSingleItem;
             mSelectedSingleItem = position;
             notifyItemChanged(previousSelectedItem);
@@ -64,6 +77,38 @@ public class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.Holder
                 mSelectedItems.add(position);
             }
         }
+        Log.d("ADAPTER", "SELECTED ITEMS SIZE: " + mSelectedItems.size());
+    }
+
+    protected void onItemClick(View v, int position) {
+        switchSelectedState(position);
+
+        if (mMode == SelectionMode.SINGLE) {
+            mClickListener.onItemClick(v, position);
+        } else {
+            mClickListener.onItemClickInMultiMode(v, position, mSelectedItems);
+        }
+        if (mSelectedItems.isEmpty()) {
+            mMode = SelectionMode.SINGLE;
+        }
+    }
+
+    protected void onItemLongClick(View v, int position) {
+        mMode = SelectionMode.MULTI;
+        switchSelectedState(position);
+
+        mClickListener.onItemLongClick(v, position, mSelectedItems);
+    }
+
+    private void switchSelectedState(int position) {
+        switchSelectionState(position);
+        notifyItemChanged(position);
+    }
+
+    public void setSelectedItems(ArrayList<Integer> selectedItems) {
+        mMode = SelectionMode.MULTI;
+        mSelectedItems = selectedItems;
+        notifyDataSetChanged();
     }
 
     @Override
@@ -87,22 +132,15 @@ public class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.Holder
         public void onClick(View v) {
             int position = getAdapterPosition();
             Log.d("HOLDER", "ON CLICK: " + position);
-
-            mAdapter.mClickListener.onItemClick(v, position);
-            switchSelectedState(position);
+            mAdapter.onItemClick(v, position);
         }
 
-        private void switchSelectedState(int position) {
-            mAdapter.switchSelectionState(position);
-            mAdapter.notifyItemChanged(position);
-        }
 
         @Override
         public boolean onLongClick(View v) {
             int position = getAdapterPosition();
             Log.d("HOLDER", "ON LONG CLICK: " + position);
-//            mAdapter.mClickListener.onItemLongClick(position);
-//            switchSelectedState(position);
+            mAdapter.onItemLongClick(v, position);
             return true;
         }
     }
