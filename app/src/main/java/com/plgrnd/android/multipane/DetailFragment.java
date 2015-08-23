@@ -16,6 +16,17 @@ public class DetailFragment extends Fragment {
 
     public static final String TAG = DetailFragment.class.getSimpleName();
 
+    private static final String ARG_ITEM_ID = "arg_item_it";
+    private int mItemId;
+
+    public static DetailFragment newInstance(int itemId) {
+        DetailFragment frag = new DetailFragment();
+        Bundle args = new Bundle();
+        args.putInt(ARG_ITEM_ID, itemId);
+        frag.setArguments(args);
+        return frag;
+    }
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -31,10 +42,13 @@ public class DetailFragment extends Fragment {
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
+        if (getArguments() != null) {
+            mItemId = getArguments().getInt(ARG_ITEM_ID);
+        }
         TextView id = (TextView) view.findViewById(R.id.detail_id_text);
         RetainedFragment retainedFragment = (RetainedFragment) getFragmentManager().findFragmentByTag(RetainedFragment.TAG);
         if (retainedFragment != null) {
-            id.setText("RETAINED TEXT: " + retainedFragment.getRetainedString());
+            id.setText("RETAINED TEXT: " + retainedFragment.getRetainedItem(mItemId));
         } else {
             id.setText("NO RETAINED FRAGMENT");
         }
