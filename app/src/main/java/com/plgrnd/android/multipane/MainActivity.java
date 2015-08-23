@@ -6,7 +6,6 @@ import android.app.FragmentTransaction;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.support.v7.widget.Toolbar;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -33,7 +32,6 @@ public class MainActivity extends AppCompatActivity implements MasterFragment.Ma
         mDualPane = findViewById(R.id.dual_pane_container) != null;
 
         FragmentManager fm = getFragmentManager();
-        Log.d("activity", "BACKSTACK COUNT: " + fm.getBackStackEntryCount());
         if (savedInstanceState == null) {
             mRetainedFragment = new RetainedFragment();
             fm.beginTransaction().add(mRetainedFragment, RetainedFragment.TAG).commit();
@@ -84,6 +82,12 @@ public class MainActivity extends AppCompatActivity implements MasterFragment.Ma
         mShowingDetail = true;
         mSelectedItem = itemId;
 
+        FragmentManager fm = getFragmentManager();
+        MasterFragment masterFragment = (MasterFragment) fm.findFragmentById(R.id.master_fragment);
+        if (masterFragment != null) {
+            masterFragment.selectItem(mSelectedItem);
+        }
+
         FragmentTransaction ft = getFragmentManager().beginTransaction();
         if (mDualPane) {
             ft.replace(R.id.detail_container, DetailFragment.newInstance(itemId), DetailFragment.TAG);
@@ -101,6 +105,11 @@ public class MainActivity extends AppCompatActivity implements MasterFragment.Ma
         mSelectedItem = NONE;
 
         FragmentManager fm = getFragmentManager();
+        MasterFragment masterFragment = (MasterFragment) fm.findFragmentById(R.id.master_fragment);
+        if (masterFragment != null) {
+            masterFragment.deselectItem();
+        }
+
         Fragment detailFragment = fm.findFragmentByTag(DetailFragment.TAG);
 
         if (detailFragment != null) {
@@ -120,7 +129,6 @@ public class MainActivity extends AppCompatActivity implements MasterFragment.Ma
         } else {
             super.onBackPressed();
         }
-        Log.d("activity", "AFTER BACK BACKSTACK COUNT: " + getFragmentManager().getBackStackEntryCount());
     }
 
     @Override
@@ -131,14 +139,13 @@ public class MainActivity extends AppCompatActivity implements MasterFragment.Ma
     }
 
     @Override
-    public void onMasterClick(View v, int itemId) {
+    public void onListItemClick(View v, int itemId) {
         removeDetailFragment();
         addDetailFragment(itemId);
-        Log.d("activity", "AFTER CLICK BACKSTACK COUNT: " + getFragmentManager().getBackStackEntryCount());
     }
 
     @Override
-    public List<String> getData() {
+    public List<String> getListData() {
         if (mRetainedFragment == null) {
             mRetainedFragment = (RetainedFragment) getFragmentManager().findFragmentByTag(RetainedFragment.TAG);
         }

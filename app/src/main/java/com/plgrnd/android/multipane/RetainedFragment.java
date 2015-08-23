@@ -17,7 +17,7 @@ public class RetainedFragment extends Fragment {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
 
-        String[] array = {"item1", "item2", "item3", "item4", "item5", "item6", "item7", "item8"};
+        String[] array = {"item0", "item1", "item2", "item3", "item4", "item5", "item6", "item7"};
         mRetainedArray = Arrays.asList(array);
     }
 

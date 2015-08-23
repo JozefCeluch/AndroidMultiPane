@@ -10,21 +10,21 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.TextView;
 
 import java.util.List;
 
-public class MasterFragment extends Fragment {
+public class MasterFragment extends Fragment implements RecyclerAdapter.OnListItemClickListener {
+
+    public interface MasterFragmentCallback {
+        void onListItemClick(View v, int itemId);
+
+        List<String> getListData();
+    }
 
     public static final String TAG = MasterFragment.class.getSimpleName();
 
-    public interface MasterFragmentCallback {
-        void onMasterClick(View v, int itemId);
-        List<String> getData();
-    }
-
     private MasterFragmentCallback mCallback;
+    private RecyclerView mRecyclerView;
 
     @Override
     public void onAttach(Activity activity) {
@@ -51,53 +51,33 @@ public class MasterFragment extends Fragment {
     @Override
     public void onViewCreated(View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        RecyclerView recyclerView = (RecyclerView) view.findViewById(R.id.recycler_view);
-        recyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
-        recyclerView.setAdapter(new RecyclerAdapter(mCallback != null ? mCallback.getData() : null ));
+
+        mRecyclerView = (RecyclerView) view.findViewById(R.id.recycler_view);
+        mRecyclerView.setLayoutManager(new LinearLayoutManager(getActivity()));
+        mRecyclerView.setAdapter(new RecyclerAdapter(this, mCallback != null ? mCallback.getListData() : null));
     }
 
-    private class RecyclerAdapter extends RecyclerView.Adapter<RecyclerAdapter.Holder> {
+    @Override
+    public boolean onItemClick(View v, int position) {
+        mCallback.onListItemClick(v, position);
+        return true;
+    }
 
-        private List<String> mItems;
+    @Override
+    public void onItemLongClick(int position) {
 
-        public RecyclerAdapter(List<String> mItems) {
-            this.mItems = mItems;
-        }
+    }
 
-        @Override
-        public Holder onCreateViewHolder(ViewGroup viewGroup, int i) {
-            return new Holder(LayoutInflater.from(viewGroup.getContext()).inflate(R.layout.recycler_item, viewGroup, false));
-        }
-
-        @Override
-        public void onBindViewHolder(Holder holder, final int i) {
-            holder.title.setText(mItems.get(i));
-            holder.item.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (mCallback != null) {
-                        mCallback.onMasterClick(v, i);
-                    } else {
-                        Log.d(TAG, "no click listener");
-                    }
-                }
-            });
-        }
-
-        @Override
-        public int getItemCount() {
-            return mItems == null ? 0 : mItems.size();
-        }
-
-        public class Holder extends RecyclerView.ViewHolder {
-            View item;
-            TextView title;
-
-            public Holder(View itemView) {
-                super(itemView);
-                item = itemView;
-                title = (TextView) itemView.findViewById(R.id.item_title);
-            }
+    public void selectItem(int position) {
+        if (isAdded()) {
+            ((RecyclerAdapter) mRecyclerView.getAdapter()).switchSelectionState(position);
         }
     }
- }
+
+    public void deselectItem() {
+        if (isAdded()) {
+            ((RecyclerAdapter) mRecyclerView.getAdapter()).switchSelectionState(-1);
+        }
+    }
+
+}
